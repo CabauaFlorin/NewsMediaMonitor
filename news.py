@@ -5,6 +5,7 @@ import newsapi
 import spacy
 from datasets import load_dataset
 import json
+from spacy.matcher import Matcher
 
 ronec = load_dataset("ronec")
 nlp = spacy.load("ro_core_news_lg")
@@ -39,3 +40,35 @@ def get_nlp():
             'content_nlp': content_nlp
         })
     return x
+
+@app.get('/nlpDetailed')
+def searchDetailed():
+    args = request.args
+    news = getNewsContent(args)
+
+    detailed = []
+
+    pattern = [{'LOWER': args},
+              {'POS':'ADP','OP':'?'},
+              {'POS':'PROPN'}]
+
+    for news_item in news:
+        doc = nlp(news_item['content'])
+
+        matcher = Matcher(nlp.vocab)
+        matcher.add(detailed, None, pattern)
+
+        matches = matcher(doc)
+        print(matcher)
+        
+        
+    return pattern
+        # for i in range(0, len(matches)):
+        #     token = doc[matches[i][1]:matches[i][2]]
+        #     detailed.append(str(token))
+
+        # for detail in detailed:
+        #     if (detail.split()[2] == ''):
+        #         detailed.remove()
+
+    
