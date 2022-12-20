@@ -6,17 +6,26 @@ import spacy
 from datasets import load_dataset
 import json
 from spacy.matcher import Matcher
+import re
 
 ronec = load_dataset("ronec")
-nlp = spacy.load("ro_core_news_lg")
+nlp = spacy.load("ro_core_news_md")
 
 app = Flask("NewsApp")
 
 def getNewsContent(args):
-    newsapi = NewsApiClient(api_key = os.environ.get("API_KEY"))
+    newsapi = NewsApiClient(api_key='ba79436deb7540b195686c7e9e046a72')
     data = newsapi.get_everything(q=args.get("title"), from_param=args.get("fromData"), to=args.get("toData"), sort_by=args.get("sort_by"), language=args.get("language")) #se mai poate adauga language='en' sau/si from_param='2019-06-15'
     results = data['articles'].copy()
     return list(results)
+
+def split_sentences(text):
+    text_splited = re.split('(\. )+|\n|\r\n', text)
+    clean_sent = []
+    for sentence in text_splited:
+        if (sentence != ". "):
+            clean_sent.append(sentence)
+    return clean_sent
 
 @app.get('/news')
 def list_news():
@@ -46,30 +55,26 @@ def searchDetailed():
     args = request.args
     news = getNewsContent(args)
 
-    detailed = []
-
-    pattern = [{'LOWER': args},
-              {'POS':'ADP','OP':'?'},
-              {'POS':'PROPN'}]
+    sentences = []
+    findedArgs = []
 
     for news_item in news:
         doc = nlp(news_item['content'])
+        sentences.append(split_sentences(doc.text))
 
-        matcher = Matcher(nlp.vocab)
-        matcher.add(detailed, None, pattern)
+    pattern = [{'LOWER':args},
+                {'POS':'ADP', 'OP':'?'},
+                {'POS':'PROPN'}]
 
-        matches = matcher(doc)
-        print(matcher)
-        
-        
+    matcher = Matcher(nlp.vocab)
+    matcher.add("findedArgs", None, pattern)
+
+    
+
+    # for sentence in sentences:
+    #     for item in sentence:
+
+       
+    #print(sentences[0][0])
+
     return pattern
-        # for i in range(0, len(matches)):
-        #     token = doc[matches[i][1]:matches[i][2]]
-        #     detailed.append(str(token))
-
-        # for detail in detailed:
-        #     if (detail.split()[2] == ''):
-        #         detailed.remove()
-
-if __name__ == "__main__":
-    app.run(debug=True)
